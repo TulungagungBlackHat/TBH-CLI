@@ -1,22 +1,15 @@
-# TBH-CLI v1.3 - Bug Bounty 8 Tools
+# TBH-CLI v1.4 - Bug Bounty 10 Tools Full
 
 <p align="center">
-  <img src="https://img.shields.io/badge/CLI-Bug%20Bounty%208%20Tools-red?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Version-v1.3-blue?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Menu%20%2B%20Command-v1.3-green?style=for-the-badge">
+  <img src="https://img.shields.io/badge/CLI-Bug%20Bounty%2010%20Tools-red?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Version-v1.4-blue?style=for-the-badge">
+  <img src="https://img.shields.io/badge/AllScan-Equivalent-green?style=for-the-badge">
 </p>
 
-> **Bug Bounty System 8 Tools** dalam 1 CLI - Menu + Command.
+> **Full 10 Tools** sama kayak AllScan, tapi **pure CLI** tanpa JSON/HTML.
 
-## ✨ Features 8 Tools
-1. **Headers** - Missing CSP/HSTS (Low)
-2. **Ports** - 80,443,8080 (Info)
-3. **Subdomains** - www,api,admin,test
-4. **Dirs** - .env/.git/admin (High)
-5. **XSS** - Reflected `<svg/onload=alert(1)>` (High)
-6. **OpenRedirect** - `?redirect=evil.com` (Medium)
-7. **CORS** - `Origin: evil.com` (High)
-8. **SQLi** - `' OR '1'='1` (High)
+## ✨ Features 10 Tools
+1. Headers 2. Ports 3. Subdomains 4. Dirs 5. XSS 6. OpenRedirect 7. CORS 8. SQLi 9. SSRF 10. LFI
 
 ## 📦 Install
 ```bash
@@ -28,10 +21,10 @@ pip install requests
 
 ## 🚀 Cara Jalanin
 
-### Menu (Gampang)
+### Menu
 ```bash
 python3 tbh
-# Pilih 1. Scan All 8 Tools -> Masukkan URL
+# Pilih 1. Scan All 10 Tools -> Masukkan URL
 ```
 
 ### Command
@@ -41,7 +34,7 @@ python3 tbh -u https://example.com
 
 ## 📸 Contoh
 ```
-[*] Bug Bounty Scan: example.com (104.20.23.154)
+[*] Bug Bounty 10 Tools: example.com (172.66.147.243)
 [1] Headers -> Missing CSP
 [2] Ports -> OPEN 80,443,8080
 [3] Subdomains -> FOUND www.example.com
@@ -50,11 +43,10 @@ python3 tbh -u https://example.com
 [6] OpenRedirect -> tidak vulnerable
 [7] CORS -> OK
 [8] SQLi -> tidak terdeteksi
-[✓] Bug Bounty CLI 8 Tools Selesai
+[9] SSRF -> tidak terdeteksi
+[10] LFI -> tidak terdeteksi
+[✓] Bug Bounty CLI 10 Tools Selesai
 ```
 
 ## 👥 TBH
 uchil404 - Tulungagung Black Hat
-
-## 📄 License
-MIT
