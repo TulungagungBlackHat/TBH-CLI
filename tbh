@@ -1,78 +1,102 @@
 #!/usr/bin/env python3
-# TBH-CLI v1.1 - Menu Interaktif + Command
-import socket, requests, argparse, sys
+# TBH-CLI v1.2 - Bug Bounty System
+import socket, requests, argparse, sys, re
 from datetime import datetime
 import urllib.parse
 
 BANNER = """\033[91m╔════════════════════════════════════╗
-\033[91m║ \033[97mTBH-CLI v1.1 \033[91m- Menu + Command       \033[91m║
+\033[91m║ \033[97mTBH-CLI v1.2 \033[91m- Bug Bounty System    \033[91m║
 \033[91m║ \033[90mTulungagung Black Hat | uchil404 \033[91m║
 \033[91m╚════════════════════════════════════╝\033[0m"""
 
-def cli_scan(url):
-    domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
-    try: ip=socket.gethostbyname(domain)
-    except: print(f"\033[91m[!] Cannot resolve {domain}\033[0m"); return
-    print(f"{BANNER}\n\033[96m[*] {domain} ({ip}) | {datetime.now().strftime('%Y-%m-%d %H:%M')}\033[0m")
-    print("-"*50)
+def scan_headers(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.1'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.2'})
         missing=[h for h in ['Content-Security-Policy','Strict-Transport-Security'] if h not in r.headers]
-        if missing: print(f"\033[93m[!] Headers Missing: {missing}\033[0m")
-        else: print(f"\033[92m[✓] Headers OK\033[0m")
-        print(f"    Status: {r.status_code} Server: {r.headers.get('Server','Unknown')}")
-    except Exception as e: print(f"\033[91m[-] Headers error: {e}\033[0m")
-    print("-"*50)
+        print(f"  Status: {r.status_code} Server: {r.headers.get('Server','Unknown')}")
+        if missing: print(f"\033[93m  [!] Missing: {missing} -> Low\033[0m")
+        else: print(f"\033[92m  [✓] Headers OK\033[0m")
+    except Exception as e: print(f"  [-] Error: {e}")
+
+def scan_ports(ip):
     for p in [80,443,8080]:
         s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.settimeout(1)
         open_ = s.connect_ex((ip,p))==0
-        color="\033[92m" if open_ else "\033[90m"
-        print(f"{color}{'OPEN' if open_ else 'CLOSED'} {p}\033[0m")
+        print(f"  {'\033[92mOPEN' if open_ else '\033[90mCLOSED'} {p}\033[0m")
         s.close()
-    print("-"*50)
-    print("\033[92m[✓] CLI Scan Selesai - Pure terminal\033[0m")
+
+def scan_subs(domain):
+    for sub in ["www","api","admin","test"]:
+        host=f"{sub}.{domain}"
+        try:
+            ip=socket.gethostbyname(host)
+            print(f"  \033[92m[FOUND] {host} -> {ip}\033[0m")
+        except: print(f"  \033[90m[NOT] {host}\033[0m")
+
+def scan_dirs(url):
+    for path in ["admin",".env",".git"]:
+        full=f"{url.rstrip('/')}/{path}"
+        try:
+            r=requests.get(full,timeout=3,allow_redirects=False)
+            if r.status_code in [200,403]: print(f"  \033[91m[FOUND] {r.status_code} {full} -> High jika .env/.git\033[0m")
+            else: print(f"  \033[90m[NOT] {r.status_code} {path}\033[0m")
+        except: print(f"  [-] {path} error")
+
+def scan_xss(url):
+    payload="<svg/onload=alert(1)>"
+    test_url=f"{url}?q={urllib.parse.quote(payload)}"
+    try:
+        r=requests.get(test_url,timeout=5)
+        if payload in r.text: print(f"  \033[91m[!] XSS Reflected di {test_url}\033[0m")
+        else: print(f"  \033[92m[✓] XSS tidak reflected\033[0m")
+    except: print(f"  [-] XSS error")
+
+def bugbounty_menu(url):
+    domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
+    try: ip=socket.gethostbyname(domain)
+    except: print("[!] Cannot resolve"); return
+    print(f"\n\033[96m[*] Bug Bounty Scan: {domain} ({ip})\033[0m")
+    print("="*50)
+    print("\033[93m[1] Headers\033[0m"); scan_headers(url)
+    print("\033[93m[2] Ports\033[0m"); scan_ports(ip)
+    print("\033[93m[3] Subdomains\033[0m"); scan_subs(domain)
+    print("\033[93m[4] Dirs\033[0m"); scan_dirs(url)
+    print("\033[93m[5] XSS\033[0m"); scan_xss(url)
+    print("="*50)
+    print("\033[92m[✓] Bug Bounty CLI Selesai - Cek manual untuk laporan\033[0m")
 
 def menu():
     print(BANNER)
-    print("\033[96mPilih mode:\033[0m")
-    print(" 1. Scan URL (ketik URL)")
-    print(" 2. Bantuan")
+    print("\033[96mBug Bounty System:\033[0m")
+    print(" 1. Scan Bug Bounty (All 5)")
+    print(" 2. Scan Cepat (Headers+Ports)")
+    print(" 3. Bantuan")
     print(" 0. Keluar")
     while True:
-        pilih=input("\n\033[97mPilih [1/2/0]: \033[0m").strip()
+        pilih=input("\n\033[97mPilih [1/2/3/0]: \033[0m").strip()
         if pilih=="1":
-            url=input("\033[96mMasukkan URL (ex: https://example.com): \033[0m").strip()
-            if url: cli_scan(url)
-            else: print("\033[91m[!] URL kosong\033[0m")
+            url=input("\033[96mURL (https://example.com): \033[0m").strip()
+            if url: bugbounty_menu(url)
         elif pilih=="2":
-            print("""
-\033[92mCara pakai:\033[0m
-  Menu:  python3 tbh          (tanpa argumen -> muncul menu)
-  Command: python3 tbh -u https://example.com
-  Command: ./tbh -u https://example.com
-""")
-        elif pilih=="0":
-            print("\033[90mBye - Always Smile :)\033[0m"); break
-        else: print("\033[91m[!] Pilih 0/1/2\033[0m")
+            url=input("\033[96mURL untuk scan cepat: \033[0m").strip()
+            if url:
+                domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
+                try: ip=socket.gethostbyname(domain); print(f"[*] {domain} ({ip})"); scan_headers(url); scan_ports(ip)
+                except: print("[!] Error")
+        elif pilih=="3":
+            print("Cara: python3 tbh | python3 tbh -u https://example.com")
+        elif pilih=="0": print("Bye"); break
+        else: print("[!] Pilih 0/1/2/3")
 
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(description="TBH-CLI Pure CLI - Menu + Command", add_help=False)
+    parser=argparse.ArgumentParser(description="TBH-CLI Bug Bounty", add_help=False)
     parser.add_argument("-u","--url",help="Target URL (command mode)")
-    parser.add_argument("-h","--help",action="store_true",help="Show help")
-    args, unknown = parser.parse_known_args()
+    parser.add_argument("-h","--help",action="store_true")
+    args,_=parser.parse_known_args()
     if args.help:
-        print(BANNER)
-        print("Usage:")
-        print("  Menu:    python3 tbh")
-        print("  Command: python3 tbh -u https://example.com")
-        print("  Help:    python3 tbh -h")
-        sys.exit(0)
+        print(BANNER); print("Menu: python3 tbh\nCommand: python3 tbh -u https://example.com"); sys.exit(0)
     if args.url:
-        cli_scan(args.url)
+        bugbounty_menu(args.url)
     else:
-        # No args -> tampilkan menu interaktif
-        if len(sys.argv)==1:
-            menu()
-        else:
-            print("\033[91m[!] Unknown args. Pakai -h untuk bantuan.\033[0m")
-            menu()
+        if len(sys.argv)==1: menu()
+        else: print("[!] Unknown"); menu()
