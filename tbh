@@ -332,7 +332,14 @@ if __name__=="__main__":
     parser.add_argument("-h","--help",action="store_true")
     args,_=parser.parse_known_args()
     import sys
-    if args.help: print(BANNER); print("Menu: python3 tbh\nCommand: python3 tbh -u https://example.com"); sys.exit(0)
+    if args.help:
+        print(BANNER)
+        print("\033[96mUsage:\033[0m")
+        print("  \033[92mMenu:\033[0m    python3 tbh")
+        print("  \033[92mCommand:\033[0m python3 tbh -u https://example.com")
+        print("  \033[92mHelp:\033[0m    python3 tbh -h")
+        print("\033[93mTools: 14 bug bounty (Headers, Ports, ... Clickjacking)\033[0m")
+        sys.exit(0)
     if args.url: bugbounty_menu(args.url)
     else:
         if len(sys.argv)==1: menu()
