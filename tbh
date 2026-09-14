@@ -257,9 +257,9 @@ def bugbounty_menu(url):
         ("24 Info Disclosure",lambda: scan_info(url)),
         ("25 Subdomain Takeover",lambda: scan_takeover(domain)),
         ("26 GraphQL",lambda: scan_graphql(url)),
-        ("27 Open Redirect 2",lambda: scan_redirect(url)),
-        ("28 XXE 2",lambda: scan_xxe(url)),
-        ("29 SSRF 2",lambda: scan_ssrf(url)),
+        ("27 Security Misconfig",lambda: scan_headers(url)),
+        ("28 Broken Auth",lambda: scan_idor(url)),
+        ("29 Sensitive Data Exposure",lambda: scan_info(url)),
         ("30 All Done",lambda: print("  \033[92m[✓] All 30 Tools Selesai - MENTOK\033[0m")),
     ]
     for name,func in checks:
