@@ -19,7 +19,7 @@ def cli_scan(url):
         if missing: print(f"\033[93m[!] Headers Missing: {missing}\033[0m")
         else: print(f"\033[92m[✓] Headers OK\033[0m")
         print(f"    Status: {r.status_code} Server: {r.headers.get('Server','Unknown')}")
-    except as e: print(f"[-] Headers error: {e}")
+    except Exception as e: print(f"[-] Headers error: {e}")
     # Ports
     print("-"*50)
     for p in [80,443]:
