@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# TBH-CLI v1.4 - Bug Bounty 10 Tools (All)
-import socket, requests, argparse, sys, urllib.parse
+# TBH-CLI v1.5 - Bug Bounty 12 Tools
+import socket, requests, argparse, sys, urllib.parse, re
 
 BANNER = """\033[91m╔════════════════════════════════════╗
-\033[91m║ \033[97mTBH-CLI v1.4 \033[91m- Bug Bounty 10 Tools  \033[91m║
+\033[91m║ \033[97mTBH-CLI v1.5 \033[91m- Bug Bounty 12 Tools  \033[91m║
 \033[91m║ \033[90mTulungagung Black Hat | uchil404 \033[91m║
 \033[91m╚════════════════════════════════════╝\033[0m"""
 
 def scan_headers(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.4'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.5'})
         missing=[h for h in ['Content-Security-Policy','Strict-Transport-Security'] if h not in r.headers]
         if missing: print(f"  \033[93m[!] Missing: {missing}\033[0m")
         else: print(f"  \033[92m[✓] Headers OK\033[0m")
@@ -89,11 +89,31 @@ def scan_lfi(url):
         else: print(f"  \033[92m[✓] LFI tidak terdeteksi\033[0m")
     except: print(f"  [-] LFI error")
 
+def scan_ssti(url):
+    payload="{{7*7}}"
+    test_url=f"{url}?q={urllib.parse.quote(payload)}"
+    try:
+        r=requests.get(test_url,timeout=5)
+        if "49" in r.text: print(f"  \033[91m[!] SSTI Potensi (49)\033[0m")
+        else: print(f"  \033[92m[✓] SSTI tidak terdeteksi\033[0m")
+    except: print(f"  [-] SSTI error")
+
+def scan_idor(url):
+    # Simple IDOR hint
+    if "id=" in url:
+        test_url=url.replace("id=", "id=1")
+        try:
+            r=requests.get(test_url,timeout=5)
+            if r.status_code==200: print(f"  \033[93m[?] IDOR cek manual: {test_url} [{r.status_code}] - ganti ID cek data lain\033[0m")
+            else: print(f"  \033[92m[✓] IDOR tidak terdeteksi\033[0m")
+        except: print(f"  [-] IDOR error")
+    else: print(f"  \033[90m[-] IDOR butuh ?id= di URL, skip\033[0m")
+
 def bugbounty_menu(url):
     domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
     try: ip=socket.gethostbyname(domain)
     except: print("[!] Cannot resolve"); return
-    print(f"\n\033[96m[*] Bug Bounty 10 Tools: {domain} ({ip})\033[0m")
+    print(f"\n\033[96m[*] Bug Bounty 12 Tools: {domain} ({ip})\033[0m")
     print("="*50)
     print("\033[93m[1] Headers\033[0m"); scan_headers(url)
     print("\033[93m[2] Ports\033[0m"); scan_ports(ip)
@@ -105,13 +125,15 @@ def bugbounty_menu(url):
     print("\033[93m[8] SQLi\033[0m"); scan_sqli(url)
     print("\033[93m[9] SSRF\033[0m"); scan_ssrf(url)
     print("\033[93m[10] LFI\033[0m"); scan_lfi(url)
+    print("\033[93m[11] SSTI\033[0m"); scan_ssti(url)
+    print("\033[93m[12] IDOR\033[0m"); scan_idor(url)
     print("="*50)
-    print("\033[92m[✓] Bug Bounty CLI 10 Tools Selesai\033[0m")
+    print("\033[92m[✓] Bug Bounty CLI 12 Tools Selesai\033[0m")
 
 def menu():
     print(BANNER)
-    print("\033[96mBug Bounty System 10 Tools:\033[0m")
-    print(" 1. Scan All 10 Tools")
+    print("\033[96mBug Bounty System 12 Tools:\033[0m")
+    print(" 1. Scan All 12 Tools")
     print(" 2. Scan Cepat (Headers+Ports)")
     print(" 3. Bantuan")
     print(" 0. Keluar")
@@ -131,7 +153,7 @@ def menu():
         else: print("[!] Pilih 0/1/2/3")
 
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(description="TBH-CLI 10 Tools", add_help=False)
+    parser=argparse.ArgumentParser(description="TBH-CLI 12 Tools", add_help=False)
     parser.add_argument("-u","--url",help="Target URL")
     parser.add_argument("-h","--help",action="store_true")
     args,_=parser.parse_known_args()
