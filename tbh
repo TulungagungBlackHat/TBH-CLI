@@ -338,7 +338,7 @@ if __name__=="__main__":
         print("  \033[92mMenu:\033[0m    python3 tbh")
         print("  \033[92mCommand:\033[0m python3 tbh -u https://example.com")
         print("  \033[92mHelp:\033[0m    python3 tbh -h")
-        print("\033[93mTools: 14 bug bounty (Headers, Ports, ... Clickjacking)\033[0m")
+        print("\033[93mTools: 35 bug bounty MENTOK EXTREME\033[0m")
         sys.exit(0)
     if args.url: bugbounty_menu(args.url)
     else:
