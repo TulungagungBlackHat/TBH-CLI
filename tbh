@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# TBH-CLI v1.6 - Bug Bounty 14 Tools
+# TBH-CLI v1.7 - Bug Bounty 16 Tools
 import socket, requests, argparse, sys, urllib.parse, re
 
 BANNER = """\033[91m╔════════════════════════════════════╗
-\033[91m║ \033[97mTBH-CLI v1.6 \033[91m- Bug Bounty 14 Tools  \033[91m║
+\033[91m║ \033[97mTBH-CLI v1.7 \033[91m- Bug Bounty 16 Tools  \033[91m║
 \033[91m║ \033[90mTulungagung Black Hat | uchil404 \033[91m║
 \033[91m╚════════════════════════════════════╝\033[0m"""
 
 def scan_headers(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.6'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.7'})
         missing=[h for h in ['Content-Security-Policy','Strict-Transport-Security'] if h not in r.headers]
         if missing: print(f"  \033[93m[!] Missing: {missing}\033[0m")
         else: print(f"  \033[92m[✓] Headers OK\033[0m")
@@ -111,10 +111,10 @@ def scan_idor(url):
 def scan_xxe(url):
     payload="""<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>"""
     try:
-        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/xml','User-Agent':'TBH-CLI/1.6'})
+        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/xml','User-Agent':'TBH-CLI/1.7'})
         if "root:" in r.text: print(f"  \033[91m[!] XXE Potensi\033[0m")
         else: print(f"  \033[92m[✓] XXE tidak terdeteksi\033[0m")
-    except: print(f"  \033[92m[✓] XXE tidak terdeteksi (no XML endpoint)\033[0m")
+    except: print(f"  \033[92m[✓] XXE tidak terdeteksi (no XML)\033[0m")
 
 def scan_crlf(url):
     payload="%0d%0aSet-Cookie: tbh=test"
@@ -125,11 +125,26 @@ def scan_crlf(url):
         else: print(f"  \033[92m[✓] CRLF tidak terdeteksi\033[0m")
     except: print(f"  [-] CRLF error")
 
+def scan_host(url):
+    try:
+        r=requests.get(url,timeout=5,headers={'Host':'evil.com','User-Agent':'TBH-CLI/1.7'})
+        if "evil.com" in r.text.lower(): print(f"  \033[91m[!] Host Header Injection Potensi\033[0m")
+        else: print(f"  \033[92m[✓] Host Header tidak terdeteksi\033[0m")
+    except: print(f"  [-] Host error")
+
+def scan_clickjack(url):
+    try:
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.7'})
+        xfo=r.headers.get('X-Frame-Options','')
+        if not xfo: print(f"  \033[93m[!] Clickjacking: Missing X-Frame-Options -> Low\033[0m")
+        else: print(f"  \033[92m[✓] X-Frame-Options: {xfo}\033[0m")
+    except: print(f"  [-] Clickjack error")
+
 def bugbounty_menu(url):
     domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
     try: ip=socket.gethostbyname(domain)
     except: print("[!] Cannot resolve"); return
-    print(f"\n\033[96m[*] Bug Bounty 14 Tools: {domain} ({ip})\033[0m")
+    print(f"\n\033[96m[*] Bug Bounty 16 Tools: {domain} ({ip})\033[0m")
     print("="*50)
     print("\033[93m[1] Headers\033[0m"); scan_headers(url)
     print("\033[93m[2] Ports\033[0m"); scan_ports(ip)
@@ -145,13 +160,15 @@ def bugbounty_menu(url):
     print("\033[93m[12] IDOR\033[0m"); scan_idor(url)
     print("\033[93m[13] XXE\033[0m"); scan_xxe(url)
     print("\033[93m[14] CRLF\033[0m"); scan_crlf(url)
+    print("\033[93m[15] Host Header\033[0m"); scan_host(url)
+    print("\033[93m[16] Clickjacking\033[0m"); scan_clickjack(url)
     print("="*50)
-    print("\033[92m[✓] Bug Bounty CLI 14 Tools Selesai\033[0m")
+    print("\033[92m[✓] Bug Bounty CLI 16 Tools Selesai\033[0m")
 
 def menu():
     print(BANNER)
-    print("\033[96mBug Bounty System 14 Tools:\033[0m")
-    print(" 1. Scan All 14 Tools")
+    print("\033[96mBug Bounty System 16 Tools:\033[0m")
+    print(" 1. Scan All 16 Tools")
     print(" 2. Scan Cepat (Headers+Ports)")
     print(" 3. Bantuan")
     print(" 0. Keluar")
@@ -171,7 +188,7 @@ def menu():
         else: print("[!] Pilih 0/1/2/3")
 
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(description="TBH-CLI 14 Tools", add_help=False)
+    parser=argparse.ArgumentParser(description="TBH-CLI 16 Tools", add_help=False)
     parser.add_argument("-u","--url",help="Target URL")
     parser.add_argument("-h","--help",action="store_true")
     args,_=parser.parse_known_args()
