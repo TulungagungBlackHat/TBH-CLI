@@ -1,36 +1,31 @@
 #!/usr/bin/env python3
-# TBH-CLI v1.2 - Bug Bounty System
-import socket, requests, argparse, sys, re
+# TBH-CLI v1.3 - Bug Bounty 8 Tools
+import socket, requests, argparse, sys, urllib.parse
 from datetime import datetime
-import urllib.parse
 
 BANNER = """\033[91m╔════════════════════════════════════╗
-\033[91m║ \033[97mTBH-CLI v1.2 \033[91m- Bug Bounty System    \033[91m║
+\033[91m║ \033[97mTBH-CLI v1.3 \033[91m- Bug Bounty 8 Tools   \033[91m║
 \033[91m║ \033[90mTulungagung Black Hat | uchil404 \033[91m║
 \033[91m╚════════════════════════════════════╝\033[0m"""
 
 def scan_headers(url):
     try:
-        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.2'})
+        r=requests.get(url,timeout=5,headers={'User-Agent':'TBH-CLI/1.3'})
         missing=[h for h in ['Content-Security-Policy','Strict-Transport-Security'] if h not in r.headers]
-        print(f"  Status: {r.status_code} Server: {r.headers.get('Server','Unknown')}")
-        if missing: print(f"\033[93m  [!] Missing: {missing} -> Low\033[0m")
-        else: print(f"\033[92m  [✓] Headers OK\033[0m")
-    except Exception as e: print(f"  [-] Error: {e}")
+        if missing: print(f"  \033[93m[!] Missing: {missing} -> Low\033[0m")
+        else: print(f"  \033[92m[✓] Headers OK\033[0m")
+    except: print(f"  \033[91m[-] Headers error\033[0m")
 
 def scan_ports(ip):
     for p in [80,443,8080]:
         s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.settimeout(1)
-        open_ = s.connect_ex((ip,p))==0
-        print(f"  {'\033[92mOPEN' if open_ else '\033[90mCLOSED'} {p}\033[0m")
+        print(f"  {'\033[92mOPEN' if s.connect_ex((ip,p))==0 else '\033[90mCLOSED'} {p}\033[0m")
         s.close()
 
 def scan_subs(domain):
     for sub in ["www","api","admin","test"]:
         host=f"{sub}.{domain}"
-        try:
-            ip=socket.gethostbyname(host)
-            print(f"  \033[92m[FOUND] {host} -> {ip}\033[0m")
+        try: ip=socket.gethostbyname(host); print(f"  \033[92m[FOUND] {host} -> {ip}\033[0m")
         except: print(f"  \033[90m[NOT] {host}\033[0m")
 
 def scan_dirs(url):
@@ -38,7 +33,7 @@ def scan_dirs(url):
         full=f"{url.rstrip('/')}/{path}"
         try:
             r=requests.get(full,timeout=3,allow_redirects=False)
-            if r.status_code in [200,403]: print(f"  \033[91m[FOUND] {r.status_code} {full} -> High jika .env/.git\033[0m")
+            if r.status_code in [200,403]: print(f"  \033[91m[FOUND] {r.status_code} {full}\033[0m")
             else: print(f"  \033[90m[NOT] {r.status_code} {path}\033[0m")
         except: print(f"  [-] {path} error")
 
@@ -47,9 +42,35 @@ def scan_xss(url):
     test_url=f"{url}?q={urllib.parse.quote(payload)}"
     try:
         r=requests.get(test_url,timeout=5)
-        if payload in r.text: print(f"  \033[91m[!] XSS Reflected di {test_url}\033[0m")
+        if payload in r.text: print(f"  \033[91m[!] XSS Reflected\033[0m")
         else: print(f"  \033[92m[✓] XSS tidak reflected\033[0m")
     except: print(f"  [-] XSS error")
+
+def scan_redirect(url):
+    payload="https://evil.com"
+    test_url=f"{url}?redirect={payload}"
+    try:
+        r=requests.get(test_url,timeout=5,allow_redirects=False)
+        if payload in r.headers.get('Location',''): print(f"  \033[91m[!] OpenRedirect Vulnerable -> {r.headers.get('Location')}\033[0m")
+        else: print(f"  \033[92m[✓] OpenRedirect tidak vulnerable [{r.status_code}]\033[0m")
+    except: print(f"  [-] Redirect error")
+
+def scan_cors(url):
+    try:
+        r=requests.get(url,timeout=5,headers={'Origin':'https://evil.com'})
+        acao=r.headers.get('Access-Control-Allow-Origin','')
+        if acao=="https://evil.com" or acao=="*": print(f"  \033[91m[!] CORS Misconfig ACAO: {acao}\033[0m")
+        else: print(f"  \033[92m[✓] CORS OK ACAO: {acao or 'none'}\033[0m")
+    except: print(f"  [-] CORS error")
+
+def scan_sqli(url):
+    payload="'"
+    test_url=f"{url}?id={urllib.parse.quote(payload)}"
+    try:
+        r=requests.get(test_url,timeout=5)
+        if "sql syntax" in r.text.lower() or "mysql" in r.text.lower(): print(f"  \033[91m[!] SQLi Potensi\033[0m")
+        else: print(f"  \033[92m[✓] SQLi tidak terdeteksi\033[0m")
+    except: print(f"  [-] SQLi error")
 
 def bugbounty_menu(url):
     domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
@@ -62,41 +83,42 @@ def bugbounty_menu(url):
     print("\033[93m[3] Subdomains\033[0m"); scan_subs(domain)
     print("\033[93m[4] Dirs\033[0m"); scan_dirs(url)
     print("\033[93m[5] XSS\033[0m"); scan_xss(url)
+    print("\033[93m[6] OpenRedirect\033[0m"); scan_redirect(url)
+    print("\033[93m[7] CORS\033[0m"); scan_cors(url)
+    print("\033[93m[8] SQLi\033[0m"); scan_sqli(url)
     print("="*50)
-    print("\033[92m[✓] Bug Bounty CLI Selesai - Cek manual untuk laporan\033[0m")
+    print("\033[92m[✓] Bug Bounty CLI 8 Tools Selesai\033[0m")
 
 def menu():
     print(BANNER)
-    print("\033[96mBug Bounty System:\033[0m")
-    print(" 1. Scan Bug Bounty (All 5)")
+    print("\033[96mBug Bounty System 8 Tools:\033[0m")
+    print(" 1. Scan All 8 Tools")
     print(" 2. Scan Cepat (Headers+Ports)")
     print(" 3. Bantuan")
     print(" 0. Keluar")
     while True:
         pilih=input("\n\033[97mPilih [1/2/3/0]: \033[0m").strip()
         if pilih=="1":
-            url=input("\033[96mURL (https://example.com): \033[0m").strip()
+            url=input("\033[96mURL: \033[0m").strip()
             if url: bugbounty_menu(url)
         elif pilih=="2":
-            url=input("\033[96mURL untuk scan cepat: \033[0m").strip()
+            url=input("\033[96mURL: \033[0m").strip()
             if url:
                 domain=urllib.parse.urlparse(url if url.startswith("http") else "https://"+url).netloc
-                try: ip=socket.gethostbyname(domain); print(f"[*] {domain} ({ip})"); scan_headers(url); scan_ports(ip)
+                try: ip=socket.gethostbyname(domain); scan_headers(url); scan_ports(ip)
                 except: print("[!] Error")
-        elif pilih=="3":
-            print("Cara: python3 tbh | python3 tbh -u https://example.com")
+        elif pilih=="3": print("Menu: python3 tbh | Command: python3 tbh -u https://example.com")
         elif pilih=="0": print("Bye"); break
         else: print("[!] Pilih 0/1/2/3")
 
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(description="TBH-CLI Bug Bounty", add_help=False)
-    parser.add_argument("-u","--url",help="Target URL (command mode)")
+    import argparse, sys
+    parser=argparse.ArgumentParser(description="TBH-CLI Bug Bounty 8 Tools", add_help=False)
+    parser.add_argument("-u","--url",help="Target URL")
     parser.add_argument("-h","--help",action="store_true")
     args,_=parser.parse_known_args()
-    if args.help:
-        print(BANNER); print("Menu: python3 tbh\nCommand: python3 tbh -u https://example.com"); sys.exit(0)
-    if args.url:
-        bugbounty_menu(args.url)
+    if args.help: print(BANNER); print("Menu: python3 tbh\nCommand: python3 tbh -u https://example.com"); sys.exit(0)
+    if args.url: bugbounty_menu(args.url)
     else:
         if len(sys.argv)==1: menu()
         else: print("[!] Unknown"); menu()
