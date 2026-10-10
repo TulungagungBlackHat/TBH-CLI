@@ -10,7 +10,7 @@ except ImportError:
     print("[!] requests required: pip install requests", file=sys.stderr)
     sys.exit(2)
 
-VERSION = "3.0"
+VERSION = "3.1"
 REPO = "https://github.com/TulungagungBlackHat/TBH-CLI"
 
 S = None
@@ -771,7 +771,7 @@ def summary():
     print(c("96", f"[✓] {len(FINDINGS)} findings | {sev_count} | risk {level} ({score})"))
     return score, level
 
-def setup(url):
+def setup(url, n_modules=None):
     global S, URL, DOMAIN, IP, BASE, BASELINE, FINDINGS
     URL = url if "://" in url else "https://" + url
     DOMAIN = urllib.parse.urlparse(URL).hostname or urllib.parse.urlparse(URL).netloc
@@ -783,49 +783,75 @@ def setup(url):
     FINDINGS.clear()
     BASELINE.clear()
     BASE = URL.rstrip("/")
-    print(c("96", f"[*] {DOMAIN} ({IP}) - {len(MODULES)} real modules"))
+    print(c("96", f"[*] {DOMAIN} ({IP}) - {n_modules or len(MODULES)} of {len(MODULES)} modules"))
     return True
 
-def run_all():
+def read_targets(path):
+    targets = []
+    try:
+        with open(path) as fh:
+            for line in fh:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    targets.append(line)
+    except OSError as e:
+        print(c("91", f"[!] cannot read targets file: {e}"), file=sys.stderr)
+    return targets
+
+def scan_target(url, names):
+    if not setup(url, len(names)):
+        print(c("91", f"[!] cannot resolve {urllib.parse.urlparse(url if '://' in url else 'https://' + url).hostname}, skipped"), file=sys.stderr)
+        return None
     start = time.time()
-    for name in list(MODULES):
-        run_module(name)
-    elapsed = round(time.time() - start, 1)
+    for n in names:
+        run_module(n)
     score, level = summary()
-    return {"tool": "TBH-CLI", "version": VERSION, "target": DOMAIN, "ip": IP, "url": URL,
-            "elapsed": elapsed, "risk_score": score, "risk_level": level,
-            "summary": {"findings": len(FINDINGS)}, "findings": FINDINGS}
+    return {"target": DOMAIN, "ip": IP, "url": URL, "elapsed": round(time.time() - start, 1),
+            "risk_score": score, "risk_level": level,
+            "findings": [dict(f, target=DOMAIN) for f in FINDINGS]}
 
 def interactive():
     print(banner())
     print(c("96", "TBH-CLI v3 - real modules only, no simulated results"))
     print(" 1. Scan ALL modules")
     print(" 2. Quick scan (headers + ports + sensitive)")
-    print(" 3. List modules")
-    print(" 4. Help")
+    print(" 3. Multi-target scan (file with one URL per line)")
+    print(" 4. List modules")
+    print(" 5. Help")
     print(" 0. Exit")
     while True:
-        ch = input(c("97", "\nPilih [1/2/3/4/0]: ")).strip()
+        ch = input(c("97", "\nPilih [1/2/3/4/5/0]: ")).strip()
         if ch in ("1", "2"):
             url = input(c("96", "URL: ")).strip()
-            if not url or not setup(url):
-                print("[!] bad URL / cannot resolve")
+            if not url:
                 continue
             names = list(MODULES) if ch == "1" else ["headers", "ports", "sensitive"]
-            start = time.time()
-            for n in names:
-                run_module(n)
-            summary()
-            if input("Save JSON? (y/n): ").strip().lower() == "y":
-                data = {"tool": "TBH-CLI", "version": VERSION, "target": DOMAIN, "findings": FINDINGS}
+            res = scan_target(url, names)
+            if res and input("Save JSON? (y/n): ").strip().lower() == "y":
                 with open("report.json", "w") as fh:
-                    json.dump(data, fh, indent=2)
+                    json.dump({"tool": "TBH-CLI", "version": VERSION, **res}, fh, indent=2)
                 print("[✓] report.json")
         elif ch == "3":
+            path = input(c("96", "targets file: ")).strip()
+            targets = read_targets(path)
+            if not targets:
+                print("[!] no targets read")
+                continue
+            results = [r for t in targets if (r := scan_target(t, list(MODULES)))]
+            print(c("96", f"[*] {len(results)}/{len(targets)} targets scanned"))
+            if results and input("Save JSON? (y/n): ").strip().lower() == "y":
+                with open("report.json", "w") as fh:
+                    json.dump({"tool": "TBH-CLI", "version": VERSION,
+                               "summary": {"targets": len(results),
+                                           "findings": sum(len(r["findings"]) for r in results)},
+                               "targets": results}, fh, indent=2)
+                print("[✓] report.json")
+        elif ch == "4":
             for i, (n, m) in enumerate(MODULES.items(), 1):
                 print(f"  {i:2}. {n:12} {m['desc']}")
-        elif ch == "4":
+        elif ch == "5":
             print("Command: python3 tbh -u https://example.com -m xss,sqli --json r.json")
+            print("Multi:   python3 tbh --targets scope.txt --json r.json")
             print("Modules: python3 tbh --list | Proxy: HTTPS_PROXY=http://127.0.0.1:8080 python3 tbh ...")
         elif ch == "0":
             print("Bye - Always Smile :)")
@@ -835,6 +861,7 @@ def main():
     global ARGS, USE_COLOR
     parser = argparse.ArgumentParser(description=f"TBH-CLI v{VERSION} - {len(MODULES)} real modules")
     parser.add_argument("-u", "--url", help="target URL")
+    parser.add_argument("--targets", help="file with one URL per line (multi-target)")
     parser.add_argument("-m", "--modules", help="comma list, e.g. xss,sqli")
     parser.add_argument("--list", action="store_true", help="list modules")
     parser.add_argument("--param", help="force injection parameter")
@@ -853,17 +880,11 @@ def main():
             print(f"{n:12} {m['desc']}")
         return 0
 
-    if not ARGS.url:
+    if not ARGS.url and not ARGS.targets:
         if len(sys.argv) == 1:
             interactive()
             return 0
-        parser.error("-u is required")
-        return 2
-
-    print(banner())
-    print(c("91", "[!] Authorized targets only."))
-    if not setup(ARGS.url):
-        print(c("91", f"[!] cannot resolve {DOMAIN}"), file=sys.stderr)
+        parser.error("-u or --targets is required")
         return 2
 
     if ARGS.modules:
@@ -875,14 +896,23 @@ def main():
     else:
         names = list(MODULES)
 
-    for n in names:
-        run_module(n)
-    score, level = summary()
+    print(banner())
+    print(c("91", "[!] Authorized targets only."))
+    targets = ([ARGS.url] if ARGS.url else []) + (read_targets(ARGS.targets) if ARGS.targets else [])
+    if not targets:
+        print(c("91", "[!] no targets to scan"), file=sys.stderr)
+        return 2
+
+    results = [r for t in targets if (r := scan_target(t, names))]
 
     if ARGS.json:
-        data = {"tool": "TBH-CLI", "version": VERSION, "target": DOMAIN, "ip": IP, "url": URL,
-                "risk_score": score, "risk_level": level,
-                "summary": {"findings": len(FINDINGS)}, "findings": FINDINGS}
+        if len(results) == 1:
+            data = {"tool": "TBH-CLI", "version": VERSION, **results[0]}
+        else:
+            data = {"tool": "TBH-CLI", "version": VERSION,
+                    "summary": {"targets": len(results),
+                                "findings": sum(len(r["findings"]) for r in results)},
+                    "targets": results}
         try:
             with open(ARGS.json, "w") as fh:
                 json.dump(data, fh, indent=2)
@@ -891,7 +921,10 @@ def main():
             print(c("91", f"[!] cannot write JSON: {e}"), file=sys.stderr)
             return 2
 
-    return 1 if any(f["severity"] in ("High", "Medium") for f in FINDINGS) else 0
+    if not results:
+        return 2
+    worst = [f for r in results for f in r["findings"] if f["severity"] in ("High", "Medium")]
+    return 1 if worst else 0
 
 if __name__ == "__main__":
     sys.exit(main())

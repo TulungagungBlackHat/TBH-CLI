@@ -18,3 +18,11 @@
 - Exit codes: 0 clean, 1 High/Medium finding, 2 error
 ### Fixed
 - Bare except blocks everywhere; hardcoded ?q= params ignored real URL params; FP-prone single checks
+
+## [3.1.0] - 2026-10-11
+### Added
+- Multi-target scanning: --targets file (one URL per line, # comments)
+- Aggregated JSON: {targets: [...], summary} for program-scope scans
+- Interactive menu option 3: multi-target scan
+- Per-target skip on DNS failure; exit code = worst finding across targets
+- Banner now shows 'N of 34 modules' when -m filters
