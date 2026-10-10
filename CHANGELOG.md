@@ -26,3 +26,8 @@
 - Interactive menu option 3: multi-target scan
 - Per-target skip on DNS failure; exit code = worst finding across targets
 - Banner now shows 'N of 34 modules' when -m filters
+
+## [3.2.0] - 2026-10-11
+### Added
+- HTML report: --html with severity cards, findings table, risk summary
+- Single- and multi-target HTML; all dynamic fields HTML-escaped
