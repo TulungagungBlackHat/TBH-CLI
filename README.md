@@ -41,6 +41,12 @@ python3 tbh
 python3 tbh -u https://example.com
 ```
 
+**Proxy (Burp/ZAP)** — no flag needed, `requests` honors standard env vars:
+
+```bash
+HTTPS_PROXY=http://127.0.0.1:8080 python3 tbh -u https://example.com
+```
+
 ## vs TBH-AllScan
 
 | | **TBH-CLI** | [**TBH-AllScan**](https://github.com/TulungagungBlackHat/TBH-AllScan) |
