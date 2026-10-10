@@ -4,10 +4,10 @@
   <a href="https://github.com/TulungagungBlackHat/TBH-CLI/actions/workflows/ci.yml"><img src="https://github.com/TulungagungBlackHat/TBH-CLI/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/license-MIT-red.svg" alt="License">
   <img src="https://img.shields.io/badge/python-3.8%2B-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/modules-31-orange.svg" alt="Modules">
+  <img src="https://img.shields.io/badge/modules-34-orange.svg" alt="Modules">
 </p>
 
-Terminal-only bug bounty menu with **31 security check modules** — no JSON files, no HTML reports, no dependencies beyond `requests`. Built for fast interactive hunting on Termux.
+Terminal-only bug bounty menu with **34 real security check modules** — no JSON files, no HTML reports, no dependencies beyond `requests`. Built for fast interactive hunting on Termux.
 
 Part of the [Tulungagung Black Hat](https://github.com/TulungagungBlackHat) toolset.
 
